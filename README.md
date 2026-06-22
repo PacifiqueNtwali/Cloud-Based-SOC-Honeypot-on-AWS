@@ -26,7 +26,7 @@ This project simulates that mission using a fully exposed Windows VM on AWS, a r
 
 | Tool | Purpose |
 |---|---|
-| AWS EC2 (Windows Server 2022) | Honeypot virtual machine |
+| AWS EC2 (Windows Server) | Honeypot virtual machine |
 | AWS CloudWatch Agent | Log collection and forwarding |
 | AWS Lambda (Python 3.12) | Log enrichment and pipeline |
 | AWS OpenSearch Service | SIEM and visualization |
@@ -42,26 +42,30 @@ This project simulates that mission using a fully exposed Windows VM on AWS, a r
 1. Launch an EC2 instance **(Windows Server 2022, t3.medium)**
 2. Enable Auto-assign public IP
 3. Create a Security Group with these inbound rules:
-   - RDP / Port 3389 / Source: `0.0.0.0/0`
-   - All Traffic / All Ports / Source: `0.0.0.0/0`
+   - RDP / Port 3389 / Source: `Anywhere`
+   - All Traffic / All Ports / Source: `Anywhere`
 4. Create and download a key pair `.pem` file to decrypt the login password
 5. RDP into the instance using the decrypted Administrator password
 6. Inside the VM open `wf.msc` and set Firewall state to **Off** on all three profiles (Domain, Private, Public)
 7. Create an IAM Role with `CloudWatchAgentServerPolicy` and attach it to the EC2 instance
 
-> **Screenshot: EC2 instance running with public IP**
+> **EC2 instance**
 >
-> ![EC2 Instance](screenshots/ec2-instance.png)
+> ![EC2 Instance](https://i.imgur.com/noArFZQ.png)
 
-> **Screenshot: Security Group inbound rules showing all traffic open**
+> **Security Group inbound rules showing all traffic open**
 >
-> ![Security Group](screenshots/security-group.png)
+> ![Security Group](https://i.imgur.com/UDJXTRD.png)
 
-> **Screenshot: Windows Firewall disabled on all profiles**
+> **Windows Firewall disabled on all profiles**
 >
-> ![Firewall Off](screenshots/firewall-disabled.png)
+> ![Firewall Off](https://i.imgur.com/k2QQ4r9.png)
+> ![Firewall Off](https://i.imgur.com/KPnDbDx.png)
+> ![Firewall Off](https://i.imgur.com/hAcUACE.png)
 
----
+**Confirm your instance is reachable using your local machine**
+>
+> ![ping the instance](https://i.imgur.com/6iAOucH.png)
 
 ### Phase 2 — Configure Log Collection
 
@@ -99,13 +103,13 @@ Write-Host "Config created."
 
 Expected output: `"status": "running"`
 
-> **Screenshot: CloudWatch Log Group showing honeypot-security-logs**
+> **CloudWatch Log Group**
 >
-> ![CloudWatch Log Group](screenshots/cloudwatch-loggroup.png)
+> ![CloudWatch Log Group](https://i.imgur.com/40ld1Le.png)
 
-> **Screenshot: Raw 4625 failed login events in the log stream**
+> **4625 failed login events in the log stream**
 >
-> ![4625 Events](screenshots/4625-events.png)
+> ![4625 Events](https://i.imgur.com/QuUT23g.png)
 
 ---
 
@@ -160,7 +164,7 @@ def send_to_opensearch(doc):
 
 
 def process_ip(ip):
-    if ip.startswith(('10.', '172.', '192.168.', '127.')):
+    if ip.startswith(('10.', '1.', '1.1.', '127.')):
         return
     if ip == MY_IP:
         return
@@ -225,17 +229,17 @@ Sent to OpenSearch: 185.220.101.50 from Germany / Frankfurt
 - Filter name: `attacks` — Filter pattern: *(leave blank)*
 - Click **Start streaming**
 
-> **Screenshot: Lambda Monitor tab showing successful invocations**
+> **Lambda Function**
 >
-> ![Lambda Monitor](screenshots/lambda-monitor.png)
+> ![Lambda Function](https://i.imgur.com/5Sf2WkC.png)
 
-> **Screenshot: Lambda logs showing Attack from Country / City**
+> **Lambda roles**
 >
-> ![Lambda Logs](screenshots/lambda-logs.png)
+> ![Lambda roles](https://i.imgur.com/JhKvu8l.png)
 
-> **Screenshot: Subscription filter connected to Lambda**
+> **Subscription filter connected to Lambda**
 >
-> ![Subscription Filter](screenshots/subscription-filter.png)
+> ![Subscription Filter](https://i.imgur.com/ZF3GUcu.png)
 
 ---
 
@@ -269,22 +273,23 @@ PUT /attacks
 }
 ```
 
-**Create index pattern:**
+** On opensearch Create index pattern:**
 - Dashboards Management → Index patterns → Create index pattern
 - Name: `attacks*` — Time field: `timestamp`
+> Dashboards Management
+> ![Index patterns](https://i.imgur.com/7siEXmy.png)
+> ![Time field](https://i.imgur.com/5zOOaN1.png)
 
 **Build the attack map:**
 - Visualize → Create visualization → Maps
 - Add layer → Clusters and grids → Index: `attacks*`
 - Geospatial field: `location` → Save
 
-> **Screenshot: OpenSearch Dev Tools confirming geo_point mapping**
+**OpenSearch attack map**
 >
-> ![Index Mapping](screenshots/opensearch-mapping.png)
-
-> **Screenshot: Attack count query result**
+> ![Visualize](https://i.imgur.com/Jlau74a.png)
 >
-> ![Attack Count](screenshots/attack-count.png)
+> ![Select maps](https://i.imgur.com/b7kQUks.png)
 
 ---
 
@@ -303,17 +308,9 @@ After 24 hours the honeypot logged **7,116 brute force attempts** from 6 countri
 
 All attempts targeted the `Administrator` account via RDP port 3389, consistent with automated credential stuffing botnets scanning the public internet for exposed Windows machines.
 
-> **Screenshot: Attack map showing global attacker origins**
+> **Attack map showing global attacker origins**
 >
-> ![Attack Map](screenshots/attack-map.png)
-
-> **Screenshot: Discover view showing individual attack records**
->
-> ![Discover View](screenshots/discover-view.png)
-
-> **Screenshot: Country aggregation in Dev Tools**
->
-> ![Country Stats](screenshots/country-stats.png)
+> ![Attack Map](https://i.imgur.com/Sk2rJxZ.png)
 
 ---
 
