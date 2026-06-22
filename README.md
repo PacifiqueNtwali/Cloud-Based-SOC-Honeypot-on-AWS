@@ -1,4 +1,4 @@
-# Cloud SOC Honeypot Lab (AWS)
+# AWS Honeypot & Threat Monitoring Lab
 
 > **Live brute-force attack monitoring using a Windows honeypot, CloudWatch, Lambda, and OpenSearch Dashboards**
 
